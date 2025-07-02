@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 import concurrent.futures
 from dataclasses import dataclass, field
 from enum import StrEnum, auto
@@ -13,13 +14,14 @@ import sys
 
 # TODO:
 # - Target should be registered explicitly, not inferred by name
-# - Separate package
-# - Guix package
+# - Separate package DONE
+# - Guix package DONE
 # - Guix build system
 # - Separate configure step
 # - Build type
-# - Test target
+# - Test step
 # - Unit tests
+# - Install step
 
 console = Console()
 
@@ -30,6 +32,10 @@ class BuildType(StrEnum):
 
 
 class CompilationError(Exception):
+    pass
+
+
+class BuildError(Exception):
     pass
 
 
@@ -46,7 +52,27 @@ class CompilationResult:
     cdb_entry: dict[str, str|list[str]]
     success: bool
 
+__TARGET_REGISTRY: list["BuildConfig"] = []
 
+
+def register_target(target: "BuildConfig"):
+    if len(__TARGET_REGISTRY) > 0:
+        console.print("[red]Multiple targets are not supported[/]")
+        return
+    if target not in __TARGET_REGISTRY:
+        __TARGET_REGISTRY.append(target)
+        console.print(f"[yellow]Target {target.app_name} registered[/]")
+    else:
+        console.print("[red]One target can only be registered once[/]")
+
+
+def pull_target() -> Iterator["BuildConfig"]:
+    while len(__TARGET_REGISTRY) > 0:
+        yield __TARGET_REGISTRY.pop()
+    raise StopIteration()
+
+
+        
 def get_local_library(name: str, path: str, static: bool) -> Library:
     """
     Create a Library object for a locally built dependency.
@@ -118,6 +144,10 @@ class BuildConfig:
     libs: list[str] = field(default_factory=list)
     build_dir: str = "build"
     _verbose: bool = False
+
+
+    def __eq__(self, value: object, /) -> bool:
+        return self.app_name == value
 
     def __post_init__(self):
         console.print("[green]Build initialized successfully![/]")

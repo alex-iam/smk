@@ -1,6 +1,9 @@
 [project]
-name = "snakemake"
+name = "smk"
 version = "0.1.0"
+authors = [
+  {name = "Oleksandr Korzh", email = "alex@korzh.me"}
+]
 description = "Tiny buid script for C/C++"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -8,6 +11,22 @@ dependencies = [
     "rich",
     "typer",
 ]
+license = "GPL-3.0-or-later"
+license-files = ["LICEN[CS]E*"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: POSIX :: Linux",
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: C",
+    "Programming Language :: C++",
+    "Topic :: Software Development :: Build Tools"
+]
+keywords = ["build", "C/C++", "C", "C++"]
+
+[project.urls]
+Homepage = "https://github.com/alex-iam/smk"
 
 
 [project.scripts]
