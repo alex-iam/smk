@@ -3,7 +3,7 @@
  (directory ".guix/modules")
  (dependencies
   (channel
-   (name 'alex-goods)
+   (name alex-goods)
    (url "https://git.sr.ht/~alex-iam/alex-guix-channel")
    (introduction
     (channel-introduction
