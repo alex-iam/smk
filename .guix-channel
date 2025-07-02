@@ -6,7 +6,7 @@
    (name 'alex-goods)
    (url "https://git.sr.ht/~alex-iam/alex-guix-channel")
    (introduction
-    (make-channel-introduction
-     "9f3df8a8be8ecc108a16e280aecac40ce4a4fb38"
-     (openpgp-fingerprint
-      "7C31 D5F7 2092 5ACA 3377 6CE9 720D D1B0 E032 09C6"))))))
+    (channel-introduction
+     (version 0)
+     (commit "9f3df8a8be8ecc108a16e280aecac40ce4a4fb38")
+     (signer "7C31 D5F7 2092 5ACA 3377 6CE9 720D D1B0 E032 09C6"))))))
