@@ -13,11 +13,9 @@
   #:use-module (alex packages basedpyright))
 
 
-
-
 (define vcs-file?
   ;; Return true if the given file is under version control.
-  (or (git-predicate (current-source-directory))
+  (or (git-predicate (dirname (dirname (current-source-directory))))
       (const #t)))
 
 
