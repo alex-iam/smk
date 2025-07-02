@@ -2,7 +2,7 @@
 ;;   guix build -f guix.scm # build an installable package
 ;;   guix shell -D -f guix.scm
 
-(define-module snakemake
+(define-module (snakemake)
   #:use-module (guix)	     
   #:use-module (guix gexp)
   #:use-module (guix packages)
