@@ -1,1 +1,1 @@
-.guix/modules/snakemake.scm
+.guix/modules/smk.scm

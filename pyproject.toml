@@ -11,7 +11,7 @@ dependencies = [
 
 
 [project.scripts]
-smk = "snakemake.__main__:app"
+smk = "smk.__main__:app"
 
 
 [build-system]
