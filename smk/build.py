@@ -6,19 +6,22 @@ import shutil
 import subprocess
 import os
 import json
+from pathlib import Path
+from typing_extensions import override
 from rich.table import Table
 from rich.console import Console
 from rich.panel import Panel
-import sys
+
+from smk.library import Library
 
 
 # TODO:
-# - Target should be registered explicitly, not inferred by name
+# - Target should be registered explicitly, not inferred by name DONE
 # - Separate package DONE
 # - Guix package DONE
 # - Guix build system
 # - Separate configure step
-# - Build type
+# - Build type DONE
 # - Test step
 # - Unit tests
 # - Install step
@@ -40,18 +43,12 @@ class BuildError(Exception):
 
 
 @dataclass
-class Library:
-    name: str
-    cflags: list[str]
-    libs: list[str]
-
-
-@dataclass
 class CompilationResult:
     obj_path: str
     cdb_entry: dict[str, str|list[str]]
     success: bool
 
+    
 __TARGET_REGISTRY: list["BuildConfig"] = []
 
 
@@ -72,65 +69,6 @@ def pull_target() -> Iterator["BuildConfig"]:
     raise StopIteration()
 
 
-        
-def get_local_library(name: str, path: str, static: bool) -> Library:
-    """
-    Create a Library object for a locally built dependency.
-    """
-    if not os.path.isdir(path):
-        raise FileNotFoundError(f"The specified library path does not exist: '{path}'")
-
-    expected_header = f"{name}.h"
-    header_path = os.path.join(path, expected_header)
-    if not os.path.exists(header_path):
-        raise FileNotFoundError(
-            f"Could not find required header '{expected_header}' in directory '{path}'"
-        )
-
-    lib_filename = f"lib{name}.a" if static else f"lib{name}.so"
-
-    lib_path = os.path.join(path, lib_filename)
-
-    if not os.path.exists(lib_path):
-        raise FileNotFoundError(
-            f"Could not find library file '{lib_filename}' in directory '{path}'"
-        )
-
-    console.print(f"[green]Found library (local): [bold]{name}[/][/]")
-
-    cflags = ["-I", path]
-    
-    libs = [f"-L{path}", f"-l{name}"]
-    
-    return Library(name=name, cflags=cflags, libs=libs)
-
-
-
-def get_system_library(name: str, static: bool = False) -> Library:
-    """Get cflags and libs for a system library using pkg-config"""
-    try:
-        cf = subprocess.run(
-            ["pkg-config", "--cflags", name],
-            capture_output=True,
-            text=True,
-        ).stdout.split()
-        lds = subprocess.run(
-            [
-                "pkg-config",
-                "--libs",
-                "--static" if static else "",
-                name
-            ],
-            capture_output=True,
-            text=True,
-        ).stdout.split()
-        console.print(f"[green]Found library (static): [bold]{name}[/][/]")
-        return Library(cflags=cf, libs=lds, name=name)
-    except subprocess.CalledProcessError as e:
-        console.print(f"[red bold]Error: Could not find library '{name}' using pkg-config.[/]")
-        console.print(f"[red]Stderr: {e.stderr.strip()}[/]")
-        sys.exit(1)
-
 
 @dataclass
 class BuildConfig:
@@ -142,21 +80,25 @@ class BuildConfig:
     sources: list[str]
     cflags: list[str]
     libs: list[str] = field(default_factory=list)
-    build_dir: str = "build"
+    _build_dir: Path = Path("build")
+    build_type: BuildType = BuildType.Debug
+    
     _verbose: bool = False
 
 
+    @override
     def __eq__(self, value: object, /) -> bool:
         return self.app_name == value
 
     def __post_init__(self):
-        console.print("[green]Build initialized successfully![/]")
+        console.print("Build initialized")
         table = Table(title="Summary", show_header=False)
         table.add_column("Name")
         table.add_column("Value")
         table.add_row("App name", f"[green]{self.app_name}[/]")
         table.add_row("Compiler", f"[green]{self.compiler}[/]")
-        table.add_row("Build folder", f"[green]./{self.build_dir}[/]")
+        # table.add_row("Build type", f"[green]{self.build_type.value}[/]")
+        # table.add_row("Build folder", f"[green]./{self._build_dir}[/]")
         console.print(table)
         
 
@@ -183,8 +125,8 @@ class BuildConfig:
         return res
 
     def compile_file(self, source: str) -> CompilationResult:
-        obj_path = os.path.join(self.build_dir, os.path.basename(source) + ".o")
-        dep_path = os.path.join(self.build_dir, os.path.basename(source) + ".d")
+        obj_path = os.path.join(self._build_dir, os.path.basename(source) + ".o")
+        dep_path = os.path.join(self._build_dir, os.path.basename(source) + ".d")
 
         os.makedirs(os.path.dirname(obj_path), exist_ok=True)
 
@@ -240,7 +182,7 @@ class BuildConfig:
 
     @property
     def app_path(self) -> str:
-        return os.path.join(self.build_dir, self.app_name)
+        return os.path.join(self._build_dir, self.app_name)
 
     def __need_relink(self, obj_paths: list[str]) -> bool:
         if not os.path.exists(self.app_path):
@@ -265,13 +207,27 @@ class BuildConfig:
             _ = subprocess.run(link_cmd, check=True)
             console.print("[green]Linking finished successfully[/]")
 
-    def build(self, gen_db: bool = False, verbose: bool = False):
+    def build(
+            self,
+            gen_db: bool = False,
+            verbose: bool = False,
+            build_type: BuildType = BuildType.Debug,
+    ):
         """
         Build executable according to the config.
         If `gen_db` is True, re-generates compile_commands.json
         Returns relative path to the executable.
         """
         self._verbose = verbose
+        self.build_type = build_type
+        self._build_dir = self._build_dir / Path(self.build_type.value)
+        match self.build_type:
+            case BuildType.Debug:
+                self.cflags.extend(["-O0", "-g", "-D", "DEBUG"])
+            case BuildType.Release:
+                self.cflags.extend(["-O3", "-D", "NDEBUG"])
+        console.print(f"[yellow bold]Build type: {self.build_type}.[/]")
+        
         res = self.compile()
         self.link([r.obj_path for r in res])
         console.print("[green bold]\nBuilt executable.[/]")
@@ -283,8 +239,8 @@ class BuildConfig:
         _ = subprocess.run(self.app_path)
 
     def clean(self):
-        if os.path.isdir(self.build_dir):
-            shutil.rmtree(self.build_dir)
+        if os.path.isdir(self._build_dir):
+            shutil.rmtree(self._build_dir)
             console.print("[yellow bold]Cleaning build directory done.[/]")
         else:
             console.print("[yellow bold]Build directory does not exist. Nothing to clean.[/]")

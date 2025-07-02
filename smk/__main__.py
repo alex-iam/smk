@@ -5,7 +5,7 @@ import sys
 from rich import print
 import importlib.util
 
-from smk.main import BuildConfig, BuildError, pull_target
+from smk.build import BuildConfig, BuildError, BuildType, pull_target
 
 project_root = pathlib.Path.cwd()
 
@@ -45,18 +45,14 @@ def build(
             typer.Option("-c",help="Generate compile-commands.json")
         ] = False,
         verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output")] = False,
+        run: Annotated[bool, typer.Option("--run", "-r", help="Run built executable")] = False,
+        build_type: Annotated[BuildType, typer.Option("--type", "-t", help="Build type")] = BuildType.Debug,
 ):
     """Build executable"""
-    _ = import_user_target().build(generate_db, verbose)
-
-
-@app.command()
-def run():
-    """Build and run"""
     target = import_user_target()
-    target.build()
-    target.run()
-    
+    target.build(generate_db, verbose, build_type)
+    if run:
+        target.run()
 
 
 @app.command()
