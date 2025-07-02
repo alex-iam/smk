@@ -10,7 +10,6 @@
   #:use-module (guix build-system pyproject)
   #:use-module (guix licenses)
   #:use-module (gnu packages)
-  #:use-module (alex packages)
   #:use-module (alex packages basedpyright))
 
 

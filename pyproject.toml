@@ -8,8 +8,12 @@ dependencies = [
     "rich",
     "typer",
 ]
+
+
 [project.scripts]
 smk = "snakemake.__main__:app"
+
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
